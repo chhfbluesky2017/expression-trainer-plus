@@ -232,3 +232,5 @@ A: 确保已安装 build tools，参考安装步骤第 3 步
 ## 📄 License
 
 MIT
+
+本程序基于https://github.com/fxy2311-youyou/expression-trainer做了一些新功能和优化，第一次上传仓库，不太会次操作，请见谅。
