@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Voice Ball</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 240px;
+      height: 320px;
+      overflow: hidden;
+      background: transparent;
+      -webkit-app-region: no-drag;
+      font-family: -apple-system, "PingFang SC", sans-serif;
+    }
+
+    .ball-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ===== 小球 ===== */
+    .ball {
+      position: absolute;
+      top: 56px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #E5007E;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.3s, box-shadow 0.3s;
+      box-shadow: 0 4px 16px rgba(229, 0, 126, 0.4);
+      z-index: 10;
+    }
+
+    .ball:hover {
+      transform: translateX(-50%) scale(1.1);
+      box-shadow: 0 6px 24px rgba(229, 0, 126, 0.5);
+    }
+
+    .ball.recording {
+      background: #ff3b3b;
+      animation: ball-pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes ball-pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 59, 59, 0.5);
+      }
+      50% {
+        box-shadow: 0 0 0 16px rgba(255, 59, 59, 0);
+      }
+    }
+
+    .ball-icon {
+      font-size: 24px;
+      user-select: none;
+      line-height: 1;
+    }
+
+    .ball-wave {
+      position: absolute;
+      bottom: 6px;
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 14px;
+    }
+
+    .ball-wave span {
+      width: 2px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 1px;
+      animation: wave 0.7s ease-in-out infinite;
+    }
+
+    .ball-wave span:nth-child(1) { animation-delay: 0s; height: 5px; }
+    .ball-wave span:nth-child(2) { animation-delay: 0.1s; height: 10px; }
+    .ball-wave span:nth-child(3) { animation-delay: 0.15s; height: 14px; }
+    .ball-wave span:nth-child(4) { animation-delay: 0.1s; height: 10px; }
+    .ball-wave span:nth-child(5) { animation-delay: 0s; height: 5px; }
+
+    @keyframes wave {
+      0%, 100% { transform: scaleY(1); }
+      50% { transform: scaleY(1.6); }
+    }
+
+    /* ===== 扇形菜单 ===== */
+    .fan-menu {
+      position: absolute;
+      top: 56px;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .fan-menu.open {
+      pointer-events: auto;
+    }
+
+    .fan-item {
+      position: absolute;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0);
+    }
+
+    .fan-menu.open .fan-item {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* 半圆扇形布局，向下展开，半径 72px */
+    .fan-item:nth-child(1) { top: 51px; left: -51px; transition-delay: 0s; }
+    .fan-item:nth-child(2) { top: 72px; left: 0; transition-delay: 0.05s; }
+    .fan-item:nth-child(3) { top: 51px; left: 51px; transition-delay: 0.1s; }
+
+    .fan-item:hover {
+      background: #E5007E;
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+
+    .fan-item-label {
+      position: absolute;
+      bottom: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      color: #888;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .fan-item:hover .fan-item-label {
+      color: #fff;
+    }
+
+    /* ===== 实时文字气泡 ===== */
+    .transcript-bubble {
+      position: absolute;
+      top: 130px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 220px;
+      min-height: 36px;
+      max-height: 170px;
+      background: rgba(0, 0, 0, 0.78);
+      border-radius: 12px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 13px;
+      line-height: 1.6;
+      word-break: break-word;
+      overflow-y: auto;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 5;
+    }
+
+    .transcript-bubble.show {
+      opacity: 1;
+    }
+
+    .transcript-bubble::-webkit-scrollbar {
+      width: 0;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="ball-container">
+    <!-- 扇形菜单 -->
+    <div id="fanMenu" class="fan-menu">
+      <div class="fan-item" data-mode="train" title="训练模式">
+        🎯
+        <span class="fan-item-label">训练</span>
+      </div>
+      <div class="fan-item" data-mode="polish" title="润色模式">
+        ✨
+        <span class="fan-item-label">润色</span>
+      </div>
+      <div class="fan-item" data-mode="close" title="收起菜单">
+        ✕
+      </div>
+    </div>
+
+    <!-- 小球 -->
+    <div id="ball" class="ball">
+      <span class="ball-icon">🎤</span>
+      <div id="wave" class="ball-wave hidden">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- 实时文字显示 -->
+    <div id="transcriptBubble" class="transcript-bubble"></div>
+  </div>
+
+  <script>
+    const ball = document.getElementById('ball');
+    const wave = document.getElementById('wave');
+    const fanMenu = document.getElementById('fanMenu');
+    const ballIcon = ball.querySelector('.ball-icon');
+    const transcriptBubble = document.getElementById('transcriptBubble');
+
+    let isRecording = false;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let mouseDownTime = 0;
+    let hasMoved = false;
+    let audioBuffer = [];
+    let bufferInterval = null;
+    let audioContext = null;
+    let audioProcessor = null;
+    let mediaStream = null;
+    let lastTypedText = ''; // 前端去重：防止 ASR 重复返回相同 final 文本
+    let lastOutputLength = 0; // 上次输出到系统窗口的字符数（用于退格替换）
+    let lastOutputText = ''; // 上次输出到系统窗口的文本
+    let lastOutputTime = 0; // 上次输出时间戳（节流）
+    let isTyping = false; // typeToWindow 是否正在执行（防止并发）
+
+    // ===== 鼠标穿透管理 =====
+    function updateMousePassthrough() {
+      const ballRect = ball.getBoundingClientRect();
+      const fanOpen = fanMenu.classList.contains('open');
+      // 获取鼠标在窗口内的位置
+      const mx = lastMouseX;
+      const my = lastMouseY;
+      const cx = ballRect.left + ballRect.width / 2;
+      const cy = ballRect.top + ballRect.height / 2;
+      const dist = Math.sqrt((mx - cx) ** 2 + (my - cy) ** 2);
+      const overBall = dist < ballRect.width / 2 + 8;
+
+      if (overBall || fanOpen) {
+        window.api.setIgnoreMouseEvents(false, false);
+      } else {
+        window.api.setIgnoreMouseEvents(true, true);
+      }
+    }
+
+    let lastMouseX = 100;
+    let lastMouseY = 100;
+
+    document.addEventListener('mousemove', (e) => {
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+      updateMousePassthrough();
+    });
+
+    // ===== 拖拽 =====
+    ball.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      hasMoved = false;
+      dragStartX = e.screenX;
+      dragStartY = e.screenY;
+      mouseDownTime = Date.now();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.screenX - dragStartX;
+      const dy = e.screenY - dragStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasMoved = true;
+      window.api.moveBall(dx, dy);
+      dragStartX = e.screenX;
+      dragStartY = e.screenY;
+    });
+
+    document.addEventListener('mouseup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      if (!hasMoved) {
+        const elapsed = Date.now() - mouseDownTime;
+        if (e.button === 2) {
+          toggleFanMenu();
+        } else if (e.button === 0 && elapsed < 300) {
+          toggleRecording();
+        }
+      }
+    });
+
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // ===== 扇形菜单 =====
+    function toggleFanMenu() {
+      fanMenu.classList.toggle('open');
+      updateMousePassthrough();
+    }
+
+    fanMenu.querySelectorAll('.fan-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const mode = item.dataset.mode;
+        if (mode === 'close') {
+          fanMenu.classList.remove('open');
+          updateMousePassthrough();
+        } else {
+          window.api.ballSwitchMode(mode);
+          fanMenu.classList.remove('open');
+        }
+      });
+    });
+
+    // 点击外部关闭扇形菜单
+    document.addEventListener('click', (e) => {
+      if (!fanMenu.classList.contains('open')) return;
+      if (!e.target.closest('.fan-item') && !e.target.closest('.ball')) {
+        fanMenu.classList.remove('open');
+        updateMousePassthrough();
+      }
+    });
+
+    // ===== 录音 =====
+    async function toggleRecording() {
+      if (isRecording) {
+        await stopRecording();
+      } else {
+        await startRecording();
+      }
+    }
+
+    async function startRecording() {
+      const initResult = await window.api.initASR();
+      if (!initResult.success) {
+        ballIcon.textContent = '❌';
+        setTimeout(() => { ballIcon.textContent = '🎤'; }, 2000);
+        return;
+      }
+
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioContext = new AudioContext({ sampleRate: 16000 });
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+
+        audioProcessor.onaudioprocess = (e) => {
+          if (!isRecording) return;
+          const samples = e.inputBuffer.getChannelData(0);
+          audioBuffer.push(...samples);
+        };
+
+        source.connect(audioProcessor);
+        audioProcessor.connect(audioContext.destination);
+
+        bufferInterval = setInterval(() => {
+          if (!isRecording || audioBuffer.length === 0) return;
+          const chunk = audioBuffer.splice(0, 8192);
+          window.api.feedAudio(chunk).then(result => {
+            if (!result || !result.text) return;
+            const now = Date.now();
+
+            if (result.isFinal) {
+              // 最终结果：替换上次的中间结果，输出到系统窗口
+              if (result.text !== lastTypedText) {
+                lastTypedText = result.text;
+                const delCount = lastOutputLength;
+                window.api.typeToWindow(result.text, delCount).then(() => {
+                  lastOutputLength = result.text.length;
+                  lastOutputText = result.text;
+                  lastOutputTime = Date.now();
+                  isTyping = false;
+                }).catch(() => { isTyping = false; });
+              }
+              transcriptBubble.textContent = '';
+              transcriptBubble.classList.remove('show');
+            } else {
+              // 中间结果：实时显示在气泡 + 替换式输出到系统窗口
+              transcriptBubble.textContent = result.text;
+              transcriptBubble.classList.add('show');
+              // 节流：间隔至少 500ms，且文本变化时才输出，且上一次输出已完成
+              if (!isTyping && result.text !== lastOutputText && now - lastOutputTime >= 500) {
+                isTyping = true;
+                const delCount = lastOutputLength;
+                const textToType = result.text;
+                window.api.typeToWindow(textToType, delCount).then(() => {
+                  lastOutputLength = textToType.length;
+                  lastOutputText = textToType;
+                  lastOutputTime = Date.now();
+                  isTyping = false;
+                }).catch(() => { isTyping = false; });
+              }
+            }
+          }).catch(() => {});
+        }, 100);
+
+        isRecording = true;
+        ball.classList.add('recording');
+        ballIcon.textContent = '🔴';
+        wave.classList.remove('hidden');
+      } catch (err) {
+        ballIcon.textContent = '❌';
+        setTimeout(() => { ballIcon.textContent = '🎤'; }, 2000);
+      }
+    }
+
+    async function stopRecording() {
+      if (bufferInterval) { clearInterval(bufferInterval); bufferInterval = null; }
+      audioBuffer = [];
+      lastTypedText = '';
+      lastOutputLength = 0;
+      lastOutputText = '';
+      lastOutputTime = 0;
+      isTyping = false;
+      transcriptBubble.textContent = '';
+      transcriptBubble.classList.remove('show');
+      if (audioProcessor) { audioProcessor.disconnect(); audioProcessor = null; }
+      if (audioContext) { audioContext.close(); audioContext = null; }
+      if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+      await window.api.stopASR();
+      isRecording = false;
+      ball.classList.remove('recording');
+      ballIcon.textContent = '🎤';
+      wave.classList.add('hidden');
+    }
+
+    // ===== 全局快捷键 =====
+    window.api.onToggleRecording(() => {
+      toggleRecording();
+    });
+  </script>
+</body>
+</html>

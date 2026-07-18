@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>词库 Playground — 分层替换卡片测试</title>
+<script>
+  (function() {
+    const savedTheme = localStorage.getItem('expression-trainer-theme');
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+    }
+  })();
+</script>
+<style>
+:root {
+  --green: #45A020;
+  --yellow: #FFD000;
+  --magenta: #E5007E;
+  --bg: #F8FFF5;
+  --bg-card: #fff;
+  --ink: #2A2A2A;
+  --ink-light: #6A6A6A;
+  --border: #e8e8e8;
+  --shadow: rgba(0,0,0,0.04);
+}
+
+body.dark {
+  --bg: #0a0a0a;
+  --bg-card: #1a1a1a;
+  --ink: #fff;
+  --ink-light: #888;
+  --border: #2a2a2a;
+  --shadow: rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, 'PingFang SC', sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  padding: 40px;
+  color: var(--ink);
+}
+
+h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: var(--ink-light);
+  font-size: 14px;
+  margin-bottom: 32px;
+}
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 32px;
+  max-width: 1200px;
+}
+
+/* 左侧：输入区 */
+.input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-area textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 20px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 16px;
+  line-height: 1.8;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  background: var(--bg-card);
+  color: var(--ink);
+}
+
+.input-area textarea:focus {
+  border-color: var(--green);
+}
+
+.input-area .hint {
+  font-size: 13px;
+  color: var(--ink-light);
+}
+
+/* 高亮输出区 */
+.output-area {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 24px;
+  min-height: 200px;
+  line-height: 2;
+  font-size: 16px;
+  box-shadow: 0 2px 12px var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.output-area .highlight {
+  background: rgba(69, 160, 32, 0.15);
+  color: var(--green);
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.output-area .highlight:hover {
+  background: rgba(69, 160, 32, 0.25);
+}
+
+.output-area .highlight-filler {
+  background: rgba(255, 208, 0, 0.2);
+  color: #B8860B;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.output-area .highlight-hedge {
+  background: rgba(229, 0, 126, 0.12);
+  color: var(--magenta);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* 右侧：替换卡片 */
+.card-panel {
+  position: sticky;
+  top: 40px;
+}
+
+.card-panel h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--ink-light);
+}
+
+.replacement-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px var(--shadow);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.replacement-card .original {
+  font-size: 13px;
+  color: var(--ink-light);
+  margin-bottom: 8px;
+}
+
+.replacement-card .word {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 12px;
+}
+
+.replacement-card .category {
+  font-size: 12px;
+  color: var(--ink-light);
+  margin-bottom: 12px;
+  padding: 2px 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.replacement-card .alternatives {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.replacement-card .alt-chip {
+  padding: 6px 14px;
+  background: var(--bg);
+  border: 1px solid rgba(69, 160, 32, 0.3);
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.replacement-card .alt-chip:hover {
+  background: var(--green);
+  color: #fff;
+  border-color: var(--green);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #ccc;
+  font-size: 14px;
+}
+
+/* 统计栏 */
+.stats-bar {
+  display: flex;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--ink-light);
+}
+
+.stats-bar .stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stats-bar .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+
+.stats-bar .dot-green { background: var(--green); }
+.stats-bar .dot-yellow { background: var(--yellow); }
+.stats-bar .dot-magenta { background: var(--magenta); }
+
+/* 词库浏览 */
+.lexicon-browser {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 2px solid var(--border);
+}
+
+.lexicon-browser h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.category-section {
+  margin-bottom: 24px;
+}
+
+.category-section h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--green);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.word-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.word-item {
+  font-size: 13px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.word-item .w-word {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.word-item .w-arrow {
+  color: var(--ink-light);
+  margin: 0 6px;
+}
+
+.word-item .w-alts {
+  color: var(--ink-light);
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<h1>🧪 词库 Playground</h1>
+<p class="subtitle">在下面输入或粘贴你的口播稿/录音逐字稿，实时看到哪些词会被高亮，以及会弹出什么替换建议。</p>
+
+<div class="stats-bar" id="stats">
+  <div class="stat"><div class="dot dot-green"></div>笼统词: <span id="stat-vague">0</span></div>
+  <div class="stat"><div class="dot dot-yellow"></div>填充词: <span id="stat-filler">0</span></div>
+  <div class="stat"><div class="dot dot-magenta"></div>犹豫词: <span id="stat-hedge">0</span></div>
+</div>
+
+<div class="main-layout">
+  <div class="input-area">
+    <textarea id="input" placeholder="在这里输入或粘贴你的口语内容...&#10;&#10;比如：我觉得今天挺开心的，感觉做了很多事情，然后嗯就是特别满足。"></textarea>
+    <div class="hint">💡 绿色 = 笼统词（有替换建议） · 黄色 = 填充词 · 粉色 = 犹豫词。点击绿色词看替换卡片。</div>
+    <div class="output-area" id="output">
+      <span style="color:#ccc">输入内容后这里会实时显示高亮...</span>
+    </div>
+  </div>
+
+  <div class="card-panel">
+    <h2>替换卡片</h2>
+    <div id="cards">
+      <div class="empty-state">👈 点击左侧绿色词查看替换建议</div>
+    </div>
+  </div>
+</div>
+
+<!-- 词库完整浏览 -->
+<div class="lexicon-browser">
+  <h2>📖 完整词库一览（第一层 97词 + 第二层替换）</h2>
+  <div id="lexicon-list"></div>
+</div>
+
+<script>
+// ===== 词库数据 =====
+const TIERED_LEXICON = {"emotions_positive": {"开心": ["欣喜", "雀跃", "畅快", "振奋", "得意", "乐开花"], "高兴": ["欣喜", "振奋", "喜悦", "欢喜", "满心欢喜", "美滋滋"], "快乐": ["愉悦", "畅快", "尽兴", "痛快", "舒坦", "乐在其中"], "幸福": ["满足", "圆满", "温暖", "知足", "甜蜜", "安稳"], "满足": ["充实", "踏实", "圆满", "心满意足", "如愿", "知足"], "感动": ["触动", "动容", "心头一热", "鼻酸", "湿了眼眶", "暖到了"], "激动": ["沸腾", "按捺不住", "热血上涌", "心跳加速", "亢奋", "血脉喷张"], "兴奋": ["亢奋", "来劲", "热血沸腾", "跃跃欲试", "精神抖擞", "嗨翻了"], "喜欢": ["着迷", "上瘾", "沉迷", "钟情", "偏爱", "心动"], "爱": ["热爱", "痴迷", "沉醉", "钟爱", "迷恋", "深深着迷"], "舒服": ["惬意", "舒坦", "自在", "松弛", "畅快", "通透"], "放松": ["松弛", "卸下来了", "如释重负", "整个人软了", "彻底放空", "身心舒展"], "安心": ["踏实", "心定了", "稳了", "吃了定心丸", "心里有底", "落地了"], "期待": ["盼着", "翘首以盼", "迫不及待", "心心念念", "满怀期待", "坐不住了"], "希望": ["渴望", "盼望", "期盼", "祈祷", "寄托", "心心念念"]}, "emotions_negative": {"难过": ["心酸", "低落", "闷闷不乐", "心沉下去了", "堵得慌", "鼻子发酸"], "伤心": ["心碎", "痛心", "心如刀割", "难以释怀", "揪心", "撕裂感"], "心痛": ["揪心", "刺痛", "钝痛", "像被掏空了", "胸口闷", "隐隐作痛"], "失望": ["心凉了", "寒心", "幻灭", "落空", "白期待了", "透心凉"], "郁闷": ["憋屈", "窝火", "闷得慌", "堵在心里", "喘不过气", "压抑"], "烦": ["烦躁", "心烦意乱", "不耐烦", "头大", "受不了", "炸毛"], "烦躁": ["坐立不安", "心浮气躁", "焦躁", "毛躁", "静不下来", "火大"], "焦虑": ["坐立不安", "忐忑", "提心吊胆", "悬着心", "如坐针毡", "心里没底"], "害怕": ["恐惧", "发怵", "心里发毛", "胆寒", "腿软", "头皮发麻"], "紧张": ["绷着", "手心出汗", "心跳加速", "大脑空白", "僵住了", "哆嗦"], "担心": ["忧心", "挂心", "放不下", "提着心", "七上八下", "总觉得不对劲"], "恐惧": ["毛骨悚然", "胆战心惊", "浑身发冷", "后背发凉", "头皮发麻", "瘫软"], "慌": ["手忙脚乱", "六神无主", "方寸大乱", "脑子一片空白", "手足无措", "懵了"], "不安": ["惴惴不安", "心神不宁", "忐忑", "悬着心", "隐隐不对劲", "有种不祥预感"], "生气": ["窝火", "恼火", "来气", "气得发抖", "火冒三丈", "怒不可遏"], "愤怒": ["暴怒", "怒火中烧", "气炸了", "怒不可遏", "七窍生烟", "咬牙切齿"], "恼火": ["来气", "火大", "气不打一处来", "恨得牙痒", "忍无可忍", "炸了"], "讨厌": ["厌恶", "反感", "排斥", "受不了", "看不顺眼", "避之不及"], "厌烦": ["腻了", "够了", "不想再碰", "倒胃口", "审美疲劳", "麻木了"], "嫌弃": ["瞧不上", "嗤之以鼻", "不屑", "看不上眼", "一言难尽", "无语"], "尴尬": ["社死", "无地自容", "脚趾抠地", "恨不得消失", "浑身不自在", "面红耳赤"], "丢人": ["出丑", "丢脸", "颜面尽失", "下不来台", "无地自容", "社会性死亡"], "羞": ["脸红", "不好意思", "害臊", "扭捏", "面红", "低下头"], "后悔": ["悔不当初", "肠子都悔青了", "追悔莫及", "恨不得回去", "懊恼", "自责"], "内疚": ["愧疚", "过意不去", "亏欠", "良心不安", "自责", "对不住"], "委屈": ["憋屈", "有苦说不出", "打碎牙往肚里咽", "不被理解", "哑巴亏", "心里苦"], "心酸": ["鼻酸", "眼眶一热", "五味杂陈", "辛酸", "百感交集", "苦涩"], "孤独": ["孤零零", "形单影只", "与世隔绝", "没有归属感", "被遗忘", "空荡荡"], "无聊": ["百无聊赖", "空虚", "度日如年", "闲得发慌", "无所事事", "混日子"]}, "states": {"累": ["精疲力竭", "筋疲力尽", "被掏空了", "浑身没劲", "快散架了", "骨头都在抗议"], "忙": ["连轴转", "脚不沾地", "马不停蹄", "喘不过气", "恨不得长八只手", "像陀螺一样"], "困": ["眼皮打架", "昏昏沉沉", "哈欠连天", "脑子糊了", "睁不开眼", "快要断片了"], "饿": ["饥肠辘辘", "前胸贴后背", "饿得头晕", "胃在抗议", "馋死了", "空腹运转"], "痛": ["刺痛", "钝痛", "火辣辣", "一阵一阵", "撕裂感", "闷痛"], "冷": ["冻透了", "瑟瑟发抖", "寒气刺骨", "手脚冰凉", "冷到骨子里", "哆嗦"], "热": ["闷热", "汗流浃背", "热得冒烟", "像蒸桑拿", "浑身黏糊糊", "中暑边缘"]}, "vague_descriptors": {"很好": ["出色", "精彩", "超预期", "惊喜", "完美", "漂亮"], "不好": ["糟糕", "一塌糊涂", "一言难尽", "崩了", "翻车", "拉胯"], "好看": ["精致", "养眼", "惊艳", "有质感", "耐看", "高级"], "厉害": ["硬核", "能打", "碾压级", "降维打击", "炸裂", "恐怖"], "难": ["棘手", "头疼", "硬骨头", "死局", "进退两难", "卡住了"], "容易": ["轻而易举", "手到擒来", "不费吹灰之力", "一气呵成", "信手拈来", "闭眼都能做"], "简单": ["基础操作", "入门级", "一目了然", "清晰明了", "没有门槛", "直截了当"], "复杂": ["盘根错节", "千头万绪", "环环相扣", "一团乱麻", "牵一发动全身", "水很深"], "重要": ["关键", "核心", "命脉", "不可或缺", "决定性的", "生死攸关"]}, "vague_verbs": {"觉得": ["认为", "判断", "确信", "意识到", "断定", "笃定"], "想": ["渴望", "打算", "企图", "琢磨", "盘算", "憧憬"], "感觉": ["察觉到", "意识到", "隐约感到", "有种直觉", "嗅到了", "捕捉到"], "做": ["执行", "落地", "推进", "搭建", "产出", "交付"], "搞": ["整", "操办", "折腾", "捣鼓", "鼓捣", "攻克"], "弄": ["摆弄", "调整", "修改", "搞定", "拿下", "处理"], "看": ["审视", "观察", "端详", "打量", "研究", "盯着"], "说": ["表达", "阐述", "强调", "坦言", "声明", "指出"]}, "intensity_markers": {"很": ["相当", "颇为", "极其", "格外", "分外", "异常"], "非常": ["极其", "万分", "无比", "异常", "空前", "前所未有"], "特别": ["格外", "尤其", "异常", "出奇", "罕见地", "超乎寻常"], "超级": ["极度", "无敌", "爆炸级", "毁灭性", "现象级", "史诗级"], "太": ["过于", "实在", "着实", "简直", "未免", "也太"], "挺": ["还算", "比较", "相对", "一定程度上", "某种意义上", "客观来说"], "有点": ["略微", "稍显", "隐约", "似乎有些", "微微", "一丝"]}, "social_expressions": {"不错": ["精彩", "到位", "有水准", "令人刮目", "超出预期", "可圈可点"], "还行": ["过得去", "中规中矩", "差强人意", "不功不过", "马马虎虎", "一般般"], "可以": ["足够", "胜任", "撑得住", "拿得出手", "扛得住", "游刃有余"], "算了": ["罢了", "作罢", "不计较了", "翻篇", "放下", "就这样吧"], "没事": ["无妨", "不碍事", "不要紧", "小事", "没大碍", "过去了"], "随便": ["无所谓", "都行", "随你", "不挑", "佛系", "怎么都好"], "一般": ["平平无奇", "中规中矩", "不温不火", "波澜不惊", "乏善可陈", "平淡"]}, "evaluation_words": {"有意思": ["有趣", "引人入胜", "耐人寻味", "新鲜", "别出心裁", "眼前一亮"], "无聊": ["乏味", "索然无味", "味同嚼蜡", "提不起兴趣", "昏昏欲睡", "一潭死水"], "奇怪": ["反常", "蹊跷", "诡异", "不对劲", "违和", "匪夷所思"], "正常": ["合理", "在意料之中", "顺理成章", "情理之中", "可以理解", "理所当然"], "麻烦": ["棘手", "头疼", "费劲", "绕不过去", "折腾", "耗精力"], "方便": ["省事", "顺手", "一步到位", "丝滑", "无缝", "触手可及"], "合适": ["恰当", "到位", "匹配", "对味", "契合", "天衣无缝"], "够了": ["足够了", "到此为止", "适可而止", "点到即止", "差不多得了", "可以收手了"]}, "action_words": {"试试": ["尝试", "探索", "实验", "挑战", "冲一下", "放手干"], "等等": ["稍候", "缓一缓", "暂停", "留步", "别急", "让子弹飞一会"], "帮忙": ["协助", "搭把手", "支援", "分担", "配合", "助攻"], "加油": ["冲", "撑住", "稳住", "顶住", "死磕", "别松劲"], "算了": ["放下", "翻篇", "不纠结了", "过去了", "释然", "到此为止"], "改": ["调整", "优化", "迭代", "修正", "打磨", "重构"], "学": ["研究", "钻研", "摸索", "探索", "吃透", "拆解"]}};
+
+const FILLER_WORDS = ['嗯','啊','呃','额','那个','就是','然后','这个','对吧','是吧','你知道','怎么说呢','反正','基本上','总之','所以说','就是说','其实吧','说实话','对对对','是是是','emmm','啧','哎','唔'];
+
+const HEDGE_WORDS = ['可能','也许','大概','应该','我觉得','好像','似乎','或许','不一定','差不多','算是','某种程度上','一般来说','感觉','可能吧','我不确定','大概率','不排除','也有可能'];
+
+// 构建第一层词到替换的映射
+const tier1Map = {};
+const CATEGORY_NAMES = {
+  'emotions_positive': '正面情绪',
+  'emotions_negative': '负面情绪',
+  'states': '身体状态',
+  'vague_descriptors': '万能形容词',
+  'vague_verbs': '万能动词',
+  'intensity_markers': '程度词',
+  'social_expressions': '社交用语',
+  'evaluation_words': '评价用语',
+  'action_words': '动作用语'
+};
+
+for (const [cat, words] of Object.entries(TIERED_LEXICON)) {
+  if (cat === '_meta') continue;
+  for (const [word, alts] of Object.entries(words)) {
+    tier1Map[word] = { alternatives: alts, category: CATEGORY_NAMES[cat] || cat };
+  }
+}
+
+// ===== 实时高亮 =====
+const input = document.getElementById('input');
+const output = document.getElementById('output');
+const cardsDiv = document.getElementById('cards');
+
+input.addEventListener('input', () => {
+  const text = input.value;
+  if (!text.trim()) {
+    output.innerHTML = '<span style="color:#ccc">输入内容后这里会实时显示高亮...</span>';
+    document.getElementById('stat-vague').textContent = '0';
+    document.getElementById('stat-filler').textContent = '0';
+    document.getElementById('stat-hedge').textContent = '0';
+    return;
+  }
+  
+  let html = text;
+  let vagueCount = 0, fillerCount = 0, hedgeCount = 0;
+  
+  // 按长度排序（长词优先匹配，避免"我觉得"被"觉得"先匹配）
+  const allTier1 = Object.keys(tier1Map).sort((a, b) => b.length - a.length);
+  const allFillers = [...FILLER_WORDS].sort((a, b) => b.length - a.length);
+  const allHedges = [...HEDGE_WORDS].sort((a, b) => b.length - a.length);
+  
+  // 标记替换（用占位符避免嵌套）
+  const markers = [];
+  let markerIdx = 0;
+  
+  // 先标记第一层词
+  for (const word of allTier1) {
+    const regex = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    html = html.replace(regex, () => {
+      vagueCount++;
+      const id = `__M${markerIdx++}__`;
+      markers.push({ id, html: `<span class="highlight" data-word="${word}">${word}</span>` });
+      return id;
+    });
+  }
+  
+  // 标记填充词
+  for (const word of allFillers) {
+    const regex = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    html = html.replace(regex, () => {
+      fillerCount++;
+      const id = `__M${markerIdx++}__`;
+      markers.push({ id, html: `<span class="highlight-filler">${word}</span>` });
+      return id;
+    });
+  }
+  
+  // 标记犹豫词
+  for (const word of allHedges) {
+    const regex = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    html = html.replace(regex, () => {
+      hedgeCount++;
+      const id = `__M${markerIdx++}__`;
+      markers.push({ id, html: `<span class="highlight-hedge">${word}</span>` });
+      return id;
+    });
+  }
+  
+  // 替换占位符
+  for (const m of markers) {
+    html = html.replace(m.id, m.html);
+  }
+  
+  // 换行处理
+  html = html.replace(/\n/g, '<br>');
+  
+  output.innerHTML = html;
+  document.getElementById('stat-vague').textContent = vagueCount;
+  document.getElementById('stat-filler').textContent = fillerCount;
+  document.getElementById('stat-hedge').textContent = hedgeCount;
+  
+  // 绑定点击事件
+  output.querySelectorAll('.highlight').forEach(el => {
+    el.addEventListener('click', () => showCard(el.dataset.word));
+  });
+});
+
+// ===== 替换卡片 =====
+function showCard(word) {
+  const info = tier1Map[word];
+  if (!info) return;
+  
+  cardsDiv.innerHTML = `
+    <div class="replacement-card">
+      <div class="original">你说了：</div>
+      <div class="word">「${word}」</div>
+      <div class="category">${info.category}</div>
+      <div class="alternatives">
+        ${info.alternatives.map(alt => `<span class="alt-chip">${alt}</span>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// ===== 词库浏览 =====
+function renderLexiconBrowser() {
+  const container = document.getElementById('lexicon-list');
+  let html = '';
+  
+  for (const [cat, words] of Object.entries(TIERED_LEXICON)) {
+    if (cat === '_meta') continue;
+    const catName = CATEGORY_NAMES[cat] || cat;
+    
+    html += `<div class="category-section">
+      <h3>${catName}（${Object.keys(words).length}词）</h3>
+      <div class="word-grid">`;
+    
+    for (const [word, alts] of Object.entries(words)) {
+      html += `<div class="word-item">
+        <span class="w-word">${word}</span>
+        <span class="w-arrow">→</span>
+        <span class="w-alts">${alts.slice(0, 3).join(' / ')}</span>
+      </div>`;
+    }
+    
+    html += '</div></div>';
+  }
+  
+  container.innerHTML = html;
+}
+
+renderLexiconBrowser();
+</script>
+
+</body>
+</html>

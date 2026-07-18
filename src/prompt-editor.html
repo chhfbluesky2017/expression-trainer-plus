@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>训练规则定制</title>
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('expression-trainer-theme');
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+      }
+    })();
+  </script>
+  <style>
+    body {
+      background: var(--bg-primary);
+      padding: 32px;
+      display: block;
+      overflow-y: auto;
+      -webkit-app-region: drag;
+    }
+
+    .editor-container {
+      -webkit-app-region: no-drag;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .section-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-locked {
+      background: var(--bg-tertiary);
+      color: var(--text-light);
+    }
+
+    .badge-editable {
+      background: rgba(229,0,126,0.1);
+      color: var(--accent);
+    }
+
+    .section-desc {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
+    .locked-preview {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 12px;
+      color: var(--text-light);
+      line-height: 1.6;
+      max-height: 120px;
+      overflow-y: auto;
+      cursor: not-allowed;
+      position: relative;
+    }
+
+    .locked-preview::after {
+      content: '🔒 底层规则不可编辑';
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 10px;
+      color: var(--text-light);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 14px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: -apple-system, 'SF Pro Text', sans-serif;
+      line-height: 1.7;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    textarea::placeholder {
+      color: var(--text-light);
+    }
+
+    .example-toggle {
+      font-size: 11px;
+      color: var(--accent);
+      cursor: pointer;
+      margin-top: 6px;
+      display: inline-block;
+    }
+
+    .example-toggle:hover {
+      text-decoration: underline;
+    }
+
+    .example-content {
+      display: none;
+      background: var(--bg-tertiary);
+      border: 1px dashed var(--border-color);
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .example-content.show {
+      display: block;
+    }
+
+    .btn-back {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      padding: 6px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      -webkit-app-region: no-drag;
+      transition: all 0.2s;
+    }
+
+    .btn-back:hover {
+      border-color: var(--text-muted);
+      color: var(--text-primary);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .btn-save {
+      flex: 1;
+      padding: 12px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-save:hover {
+      background: #c70069;
+    }
+
+    .btn-reset {
+      padding: 12px 20px;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-reset:hover {
+      border-color: var(--text-muted);
+      color: var(--text-secondary);
+    }
+
+    .save-success {
+      text-align: center;
+      color: #69db7c;
+      font-size: 13px;
+      margin-top: 12px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .save-success.show {
+      opacity: 1;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border-color);
+      margin: 28px 0;
+    }
+  </style>
+</head>
+<body>
+  <button class="btn-back" id="btn-back">返回</button>
+  <div class="editor-container">
+    <h1>🎯 训练规则定制</h1>
+    <p class="subtitle">底层词库和基础反馈规则始终生效。你可以在上面叠加个人化的训练目标和规则。</p>
+
+    <!-- 底层：锁定预览 -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">底层系统规则</span>
+        <span class="section-badge badge-locked">锁定</span>
+      </div>
+      <div class="locked-preview">
+14条实时反馈规则（重复检测 / 结论缺失 / 自问自答 / 听众视角 / 前后矛盾 / 时间感知 / 金句捕捉 / 类比检测 / 抽象→具象 / 主题漂移 / 立场模糊）
++ 词库高亮（笼统词 / 填充词 / 犹豫词）
++ 完整报告模板（总评 / 亮点 / 逐句编辑 / 用词替换表 / 行为模式 / 数据）
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- 用户自定义：训练目标 -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">我的训练目标</span>
+        <span class="section-badge badge-editable">可编辑</span>
+      </div>
+      <p class="section-desc">你现阶段最想改善的表达问题是什么？AI会据此调整反馈优先级。</p>
+      <textarea id="goals" placeholder="比如：&#10;- 我想减少说「然后」的频率&#10;- 我想练习每段话都有一个明确结论&#10;- 我想让表达更有画面感，多用具体细节&#10;- 我想练习用数字代替「很多/很少」"></textarea>
+      <span class="example-toggle" onclick="toggleExample('goals-example')">💡 看示例</span>
+      <div id="goals-example" class="example-content">
+我现在最大的问题是：<br>
+1. 说话太散，经常跑题，一段话说完别人不知道我想表达什么<br>
+2. 口癖「然后」「就是」太多，听起来不专业<br>
+3. 描述事情总是用笼统的词，比如「很好」「挺不错的」，缺少具体画面
+      </div>
+    </div>
+
+    <!-- 用户自定义：自定义规则 -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">自定义触发规则</span>
+        <span class="section-badge badge-editable">可编辑</span>
+      </div>
+      <p class="section-desc">格式：触发条件 → 输出什么提示（跟底层14条规则一起生效）</p>
+      <textarea id="custom-rules" placeholder="比如：&#10;- 连续3句以「我」开头 → 「换个主语」&#10;- 出现「其实吧」「说实话」→ 「直接说」&#10;- 超过30秒没举例子 → 「来个例子」"></textarea>
+      <span class="example-toggle" onclick="toggleExample('rules-example')">💡 看示例</span>
+      <div id="rules-example" class="example-content">
+- 连续说了两个「非常」→ 「换个程度词」<br>
+- 出现「怎么说呢」→ 「别绕，直说」<br>
+- 讲了一个观点但没给原因 → 「为什么？」<br>
+- 用了英文但没翻译 → 「给个中文」
+      </div>
+    </div>
+
+    <!-- 用户自定义：参考风格 -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">我想要的表达风格</span>
+        <span class="section-badge badge-editable">可编辑</span>
+      </div>
+      <p class="section-desc">描述你理想中的说话方式，AI会在反馈时以此为标准。</p>
+      <textarea id="style-ref" placeholder="比如：&#10;- 像跟朋友聊天一样自然，不要播音腔&#10;- 多用第二人称「你」直接对观众说话&#10;- 数字锚定：用具体数字代替「很多/一些」&#10;- 先说结论再展开，不要铺垫太久"></textarea>
+    </div>
+
+    <!-- 用户自定义：额外词库 -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">我的口癖补充</span>
+        <span class="section-badge badge-editable">可编辑</span>
+      </div>
+      <p class="section-desc">你自己特有的口癖/高频词，底层词库没覆盖到的。</p>
+      <textarea id="custom-words" rows="3" placeholder="比如：对吧、你知道吗、怎么说呢、确实、属于是"></textarea>
+    </div>
+
+    <!-- 按钮 -->
+    <div class="btn-row">
+      <button class="btn-save" id="btn-save">保存规则</button>
+      <button class="btn-reset" id="btn-reset">恢复默认</button>
+    </div>
+    <div class="save-success" id="save-success">✓ 已保存，下次训练生效</div>
+  </div>
+
+  <script>
+    function toggleExample(id) {
+      const el = document.getElementById(id);
+      el.classList.toggle('show');
+    }
+
+    async function loadCustomPrompt() {
+      const data = await window.api.getCustomPrompt();
+      if (data) {
+        document.getElementById('goals').value = data.goals || '';
+        document.getElementById('custom-rules').value = data.customRules || '';
+        document.getElementById('style-ref').value = data.styleRef || '';
+        document.getElementById('custom-words').value = data.customWords || '';
+      }
+    }
+
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      const data = {
+        goals: document.getElementById('goals').value.trim(),
+        customRules: document.getElementById('custom-rules').value.trim(),
+        styleRef: document.getElementById('style-ref').value.trim(),
+        customWords: document.getElementById('custom-words').value.trim()
+      };
+      await window.api.saveCustomPrompt(data);
+      const msg = document.getElementById('save-success');
+      msg.classList.add('show');
+      setTimeout(() => msg.classList.remove('show'), 2000);
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', async () => {
+      if (confirm('确定要清空所有自定义规则吗？')) {
+        document.getElementById('goals').value = '';
+        document.getElementById('custom-rules').value = '';
+        document.getElementById('style-ref').value = '';
+        document.getElementById('custom-words').value = '';
+        await window.api.saveCustomPrompt({ goals: '', customRules: '', styleRef: '', customWords: '' });
+        const msg = document.getElementById('save-success');
+        msg.textContent = '✓ 已恢复默认';
+        msg.classList.add('show');
+        setTimeout(() => { msg.classList.remove('show'); msg.textContent = '✓ 已保存，下次训练生效'; }, 2000);
+      }
+    });
+
+    document.getElementById('btn-back').addEventListener('click', () => {
+      if (window.api && window.api.closeWindow) {
+        window.api.closeWindow();
+      } else {
+        window.close();
+      }
+    });
+
+    loadCustomPrompt();
+  </script>
+</body>
+</html>

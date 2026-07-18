@@ -1,0 +1,103 @@
+{
+  "name": "expression-trainer",
+  "version": "2.0.0",
+  "description": "宇宙无敌表达训练系统 - 本地桌面版",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-packager . \"表达训练系统\" --platform=win32 --arch=x64 --out=dist --overwrite --icon=src/assets/icon.ico",
+    "build:win": "electron-packager . \"表达训练系统\" --platform=win32 --arch=x64 --out=dist --overwrite --icon=src/assets/icon.ico",
+    "build:mac": "electron-packager . \"表达训练系统\" --platform=darwin --arch=x64 --out=dist --overwrite --icon=src/assets/icon.icns",
+    "build:linux": "electron-packager . \"expression-trainer\" --platform=linux --arch=x64 --out=dist --overwrite"
+  },
+  "keywords": [
+    "expression",
+    "training",
+    "speech",
+    "asr",
+    "chinese"
+  ],
+  "author": "sisi",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-packager": "^17.1.2"
+  },
+  "dependencies": {
+    "sherpa-onnx-node": "^1.10.0"
+  },
+  "build": {
+    "appId": "com.sisi.expression-trainer",
+    "productName": "表达训练系统",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "lib/**/*",
+      "src/**/*",
+      "data/**/*",
+      "models/**/*",
+      "package.json",
+      "LICENSE",
+      "README.md"
+    ],
+    "extraResources": [
+      {
+        "from": "models/",
+        "to": "models",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "sign": false,
+      "verifyUpdateCodeSignature": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "src/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "src/assets/icon.ico",
+      "uninstallerIcon": "src/assets/icon.ico",
+      "installerHeaderIcon": "src/assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "src/assets/icon.icns"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "src/assets/icon.png"
+    }
+  }
+}

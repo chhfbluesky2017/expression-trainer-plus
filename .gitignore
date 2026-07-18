@@ -1,0 +1,13 @@
+node_modules/
+models/*.onnx
+models/sherpa-onnx-*/
+dist/
+.DS_Store
+build/
+release/
+*.log
+.npm-debug.log*
+
+demo-*.html
+prompt-playground.html
+listenhub-*.png
